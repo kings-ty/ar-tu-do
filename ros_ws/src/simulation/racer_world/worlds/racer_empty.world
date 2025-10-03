@@ -4,7 +4,7 @@
   <world name="default">
 
     <include>
-      <uri>model://ground_plane</uri>
+      <uri>package://racer_world/meshes/ground_plane</uri>
     </include>
 
     <include>

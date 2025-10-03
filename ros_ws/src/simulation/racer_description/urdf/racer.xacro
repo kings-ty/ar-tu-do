@@ -1,7 +1,55 @@
 <?xml version='1.0'?>
-
 <robot name="myrobot" 
   xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <robot_param>robot_description</robot_param>
+      <robot_param_node>robot_state_publisher</robot_param_node>
+      <parameters>/home/ty/f1test_ws/ar-tu-do/control_config.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+  <!-- ROS2 Control Interfaces -->
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    <!-- Rear Wheel Drive Joints -->
+    <joint name="left_wheel_back_hinge">
+      <command_interface name="velocity">
+        <param name="min">-100</param>
+        <param name="max">100</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="right_wheel_back_hinge">
+      <command_interface name="velocity">
+        <param name="min">-100</param>
+        <param name="max">100</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <!-- Front Wheel Steering Joints -->
+    <joint name="left_steering_hinge">
+      <command_interface name="position">
+        <param name="min">-1.0</param>
+        <param name="max">1.0</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="right_steering_hinge">
+      <command_interface name="position">
+        <param name="min">-1.0</param>
+        <param name="max">1.0</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
 
   <xacro:arg name="simulation" default="false"/>
 
@@ -23,6 +71,22 @@
   <xacro:property name="bodySizeH" value="0.1"/>
   <xacro:property name="bodyMass" value="3.5"/>
 
+  <!-- Wheel properties -->
+  <xacro:property name="wheel_radius" value="0.05" /> 
+  <xacro:property name="wheel_height" value="0.045" />
+  <xacro:property name="wheel_mass" value="0.2" />
+  
+  <xacro:property name="base_x_origin_to_wheel_origin" value="0.16" />
+  <xacro:property name="base_y_origin_to_wheel_origin" value="0.1055" />
+  <xacro:property name="base_z_origin_to_wheel_origin" value="0" />
+  <xacro:property name="base_x_sphere_origin_to_wheel_origin" value="0.000" />
+  <xacro:property name="base_y_sphere_origin_to_wheel_origin" value="0.001" />
+  <xacro:property name="base_z_sphere_origin_to_wheel_origin" value="0" />
+  
+  <!-- Steering properties -->
+  <xacro:property name="steering_radius" value="0.01" /> 
+  <xacro:property name="steering_mass" value="0.07" />
+
   <link name="base_link" />
 
   <joint name="base_link_joint" type="fixed">
@@ -36,7 +100,7 @@
     <inertial>
       <mass value="${bodyMass}"/>
       <origin xyz="0 0 ${wheel_height/2}" rpy=" 0 0 0"/>
-      <box_inertia m="${bodyMass}" l="${bodySizeL}" b="${bodySizeB}" h="${bodySizeH}" />
+      <xacro:box_inertia m="${bodyMass}" l="${bodySizeL}" b="${bodySizeB}" h="${bodySizeH}" />
     </inertial>
 
     <collision name='collision'>
@@ -49,10 +113,17 @@
     <visual>
       <origin xyz="0 0 0" rpy=" 0 0 0"/>
       <geometry>
-        <mesh filename="package://racer_description/meshes/car.dae"/>
+        <mesh filename="file:///home/ty/f1test_ws/ar-tu-do/ros_ws/install/racer_description/share/racer_description/meshes/car.dae"/>
       </geometry>
+      <material name="car_material">
+        <color rgba="1.0 0.5 0.0 1.0"/>
+      </material>
     </visual>
   </link>
+
+  <gazebo reference="chassis">
+    <material>Gazebo/Orange</material>
+  </gazebo>
 
   <joint name="base_body_joint" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0" />
@@ -64,30 +135,34 @@
     <visual>
       <origin xyz="0 0 0.05" rpy=" 0 0 0"/>
       <geometry>
-        <mesh filename="package://racer_description/meshes/body.dae"/>
+        <mesh filename="file:///home/ty/f1test_ws/ar-tu-do/ros_ws/install/racer_description/share/racer_description/meshes/body.dae"/>
       </geometry>
     </visual>
   </link>
 
+  <gazebo reference="body">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+
     <!--  Wheels  -->
-  <wheel fb="front" lr="left" parent="left_steering" translateX="1" translateY="1" left="1" OffsetJointX= "${base_x_sphere_origin_to_wheel_origin}" OffsetJointY= "${base_y_sphere_origin_to_wheel_origin}" OffsetJointZ= "${base_z_sphere_origin_to_wheel_origin}" OffsetY="0.02" />
+  <xacro:wheel fb="front" lr="left" parent="left_steering" translateX="1" translateY="1" left="1" OffsetJointX= "${base_x_sphere_origin_to_wheel_origin}" OffsetJointY= "${base_y_sphere_origin_to_wheel_origin}" OffsetJointZ= "${base_z_sphere_origin_to_wheel_origin}" OffsetY="0.02" />
 
-  <wheel fb="front" lr="right" parent="right_steering" translateX="1" translateY="-1" left="0" OffsetJointX= "${base_x_sphere_origin_to_wheel_origin}" OffsetJointY= "${base_y_sphere_origin_to_wheel_origin}" OffsetJointZ= "${base_z_sphere_origin_to_wheel_origin}" OffsetY="-0.02" />
+  <xacro:wheel fb="front" lr="right" parent="right_steering" translateX="1" translateY="-1" left="0" OffsetJointX= "${base_x_sphere_origin_to_wheel_origin}" OffsetJointY= "${base_y_sphere_origin_to_wheel_origin}" OffsetJointZ= "${base_z_sphere_origin_to_wheel_origin}" OffsetY="-0.02" />
 
-  <wheel fb="back" lr="left" parent="chassis" translateX="-1" translateY="1" left="1" OffsetJointX= "${base_x_origin_to_wheel_origin}" OffsetJointY= "${base_y_origin_to_wheel_origin}" OffsetJointZ= "${base_z_origin_to_wheel_origin}" OffsetY="0.021" />
+  <xacro:wheel fb="back" lr="left" parent="chassis" translateX="-1" translateY="1" left="1" OffsetJointX= "${base_x_origin_to_wheel_origin}" OffsetJointY= "${base_y_origin_to_wheel_origin}" OffsetJointZ= "${base_z_origin_to_wheel_origin}" OffsetY="0.021" />
 
-  <wheel fb="back" lr="right" parent="chassis" translateX="-1" translateY="-1" left="0" OffsetJointX= "${base_x_origin_to_wheel_origin}" OffsetJointY= "${base_y_origin_to_wheel_origin}" OffsetJointZ= "${base_z_origin_to_wheel_origin}" OffsetY="-0.021" />
+  <xacro:wheel fb="back" lr="right" parent="chassis" translateX="-1" translateY="-1" left="0" OffsetJointX= "${base_x_origin_to_wheel_origin}" OffsetJointY= "${base_y_origin_to_wheel_origin}" OffsetJointZ= "${base_z_origin_to_wheel_origin}" OffsetY="-0.021" />
 
   <!-- Steering -->
-  <steering_hinge lr="left" parent="chassis" translateY="1" OffsetY="0.01" />
-  <steering_hinge lr="right" parent="chassis" translateY="-1" OffsetY="-0.01" />
+  <xacro:steering_hinge lr="left" parent="chassis" translateY="1" OffsetY="0.01" />
+  <xacro:steering_hinge lr="right" parent="chassis" translateY="-1" OffsetY="-0.01" />
 
   <!-- Camera -->
   <link name="camera">
     <inertial>
       <mass value="${cameraMass}" />
       <origin xyz="0 0 ${wheel_height/2}" rpy="0 0 0"/>
-      <box_inertia m="${cameraMass}" l="${cameraSizeL}" b="${cameraSizeB}" h="${cameraSizeH}" />
+      <xacro:box_inertia m="${cameraMass}" l="${cameraSizeL}" b="${cameraSizeB}" h="${cameraSizeH}" />
     </inertial>
 
     <collision>
@@ -100,10 +175,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://racer_description/meshes/ZED.dae"/>
+        <mesh filename="file:///home/ty/f1test_ws/ar-tu-do/ros_ws/install/racer_description/share/racer_description/meshes/ZED.dae"/>
       </geometry>
     </visual>
-  </link>s
+  </link>
+
+  <gazebo reference="camera">
+    <material>Gazebo/Red</material>
+  </gazebo>
 
   <joint name="camera_joint" type="fixed">
     <axis xyz="0 1 0" />
@@ -117,7 +196,7 @@
     <inertial>
       <mass value="${hokuyoMass}" />
       <origin xyz="0 0 ${wheel_height/2}" rpy="0 0 0"/>
-      <box_inertia m="${hokuyoMass}" l="${hokuyoSize}" b="${hokuyoSize}" h="${hokuyoSize}" />
+      <xacro:box_inertia m="${hokuyoMass}" l="${hokuyoSize}" b="${hokuyoSize}" h="${hokuyoSize}" />
     </inertial>
 
     <collision>
@@ -130,10 +209,14 @@
     <visual>
       <origin xyz="0 0 ${wheel_height/2}" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://racer_description/meshes/hokuyo.dae"/>
+        <mesh filename="file:///home/ty/f1test_ws/ar-tu-do/ros_ws/install/racer_description/share/racer_description/meshes/hokuyo.dae"/>
       </geometry>
     </visual>
   </link>
+
+  <gazebo reference="laser">
+    <material>Gazebo/Green</material>
+  </gazebo>
 
   <joint name="laser_joint" type="fixed">
     <axis xyz="0 1 0" />

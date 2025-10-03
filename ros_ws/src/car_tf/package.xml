@@ -1,34 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package format="2">
+<package format="3">
   <name>car_tf</name>
   <version>0.0.0</version>
-  <description>The car_tf package</description>
+  <description>LaserScan to PointCloud2 transformer with TF coordinate frame conversion</description>
 
-    <!-- Maintainer -->
+  <!-- Maintainer -->
   <maintainer email="f110@ls12.cs.uni-dortmund.de">PG F1/10</maintainer>
 
   <!-- License -->
   <license>MIT</license>
   <license>GPLv3</license>
 
-    <!-- Dependencies -->
-  <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>tf</build_depend>
-  <build_export_depend>sensor_msgs</build_export_depend>
-  <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>tf</build_export_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>tf</exec_depend>
-  <depend>laser_geometry</depend>
+  <!-- ROS 2 Dependencies -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>laser_geometry</depend>
 
+  <!-- Testing Dependencies -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
 
-  <!-- The export tag contains other, unspecified, tags -->
+  <!-- Export information -->
   <export>
-    <!-- Other tools can request additional information be placed here -->
-
+    <build_type>ament_cmake</build_type>
   </export>
+
 </package>

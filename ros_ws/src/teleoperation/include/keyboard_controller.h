@@ -4,15 +4,16 @@
 #include <SDL2/SDL_keycode.h>
 #include <algorithm>
 #include <array>
-#include <drive_msgs/drive_param.h>
-#include <ros/package.h>
-#include <ros/ros.h>
+#include <memory>
 #include <signal.h>
-#include <std_msgs/Int32.h>
 #include <stdexcept>
 
-#include <dynamic_reconfigure/server.h>
-#include <teleoperation/keyboard_controllerConfig.h>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/int32.hpp>
+#include <std_msgs/msg/header.hpp>
+#include <drive_msgs/msg/drive_param.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <rcl_interfaces/msg/parameter_descriptor.hpp>
 
 constexpr const char* TOPIC_DRIVE_PARAMETERS = "input/drive_param/keyboard";
 constexpr const char* TOPIC_HEARTBEAT_MANUAL = "/input/heartbeat_manual";
@@ -49,7 +50,7 @@ enum class DriveMode : int
 constexpr double PARAMETER_UPDATE_FREQUENCY = 90;
 constexpr int SCREEN_EDGE_MARGIN = 20;
 
-class KeyboardController
+class KeyboardController : public rclcpp::Node
 {
     public:
     KeyboardController();
@@ -80,15 +81,11 @@ class KeyboardController
     std::array<Keycode, KEY_COUNT> m_key_codes = { { Keycode::W, Keycode::A, Keycode::S, Keycode::D, Keycode::SPACE,
                                                      Keycode::B } };
 
-    dynamic_reconfigure::Server<teleoperation::keyboard_controllerConfig> m_dyn_cfg_server;
+    rclcpp::Publisher<drive_msgs::msg::DriveParam>::SharedPtr m_drive_parameters_publisher;
+    rclcpp::Publisher<std_msgs::msg::Header>::SharedPtr m_enable_manual_publisher;
+    rclcpp::Publisher<std_msgs::msg::Header>::SharedPtr m_enable_autonomous_publisher;
 
-    ros::NodeHandle m_node_handle;
-
-    ros::Publisher m_drive_parameters_publisher;
-    ros::Publisher m_enable_manual_publisher;
-    ros::Publisher m_enable_autonomous_publisher;
-
-    ros::Subscriber m_drive_mode_subscriber;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr m_drive_mode_subscriber;
 
     SDL_Window* m_window;
 
@@ -101,7 +98,7 @@ class KeyboardController
     double m_velocity = 0;
     double m_angle = 0;
 
-    ros::Timer m_timer;
+    rclcpp::TimerBase::SharedPtr m_timer;
 
     DriveMode m_drive_mode = DriveMode::LOCKED;
 
@@ -114,13 +111,10 @@ class KeyboardController
     void updateDeadMansSwitch();
 
     void createWindow();
-    void timerCallback(const ros::TimerEvent& event);
-    void driveModeCallback(const std_msgs::Int32::ConstPtr& drive_mode_message);
+    void timerCallback();
+    void driveModeCallback(const std_msgs::msg::Int32::SharedPtr drive_mode_message);
     void updateWindow();
     void loadImages();
 
-    /**
-     * @brief The current value of the members (with regarding to the dyn config) are updated on the server
-     */
-    void updateDynamicConfig();
+    void declareParameters();
 };

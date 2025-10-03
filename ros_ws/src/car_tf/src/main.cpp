@@ -8,9 +8,10 @@
  */
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "laserscan_transformer");
-    LaserscanTransformer tf_laserscan_to_pointcloud;
-    ros::spin();
+    rclcpp::init(argc, argv);
+    auto laserscan_transformer = std::make_shared<LaserscanTransformer>();
+    rclcpp::spin(laserscan_transformer);
+    rclcpp::shutdown();
 
     return EXIT_SUCCESS;
 }

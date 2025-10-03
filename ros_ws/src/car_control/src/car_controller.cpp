@@ -1,27 +1,29 @@
 #include "car_controller.h"
 #include "car_config.h"
 
-#include <boost/algorithm/clamp.hpp>
+#include <algorithm>
 
 CarController::CarController()
-    : m_drive_param_lock{ true }
+    : Node("car_controller")
+    , m_drive_param_lock{ true }
     , m_emergency_stop_lock{ true }
 {
     this->m_drive_parameters_subscriber =
-        this->m_node_handle.subscribe<drive_msgs::drive_param>(TOPIC_DRIVE_PARAM, 1,
-                                                               &CarController::driveParametersCallback, this);
+        this->create_subscription<drive_msgs::msg::DriveParam>(TOPIC_DRIVE_PARAM, 1,
+            std::bind(&CarController::driveParametersCallback, this, std::placeholders::_1));
     this->m_drive_mode_subscriber =
-        this->m_node_handle.subscribe<std_msgs::Int32>(TOPIC_DRIVE_MODE, 1, &CarController::driveModeCallback, this);
+        this->create_subscription<std_msgs::msg::Int32>(TOPIC_DRIVE_MODE, 1,
+            std::bind(&CarController::driveModeCallback, this, std::placeholders::_1));
     this->m_emergency_stop_subscriber =
-        this->m_node_handle.subscribe<std_msgs::Bool>(TOPIC_EMERGENCY_STOP, 1, &CarController::emergencyStopCallback,
-                                                      this);
+        this->create_subscription<std_msgs::msg::Bool>(TOPIC_EMERGENCY_STOP, 1,
+            std::bind(&CarController::emergencyStopCallback, this, std::placeholders::_1));
 
-    this->m_speed_publisher = this->m_node_handle.advertise<std_msgs::Float64>(TOPIC_FOCBOX_SPEED, 1);
-    this->m_angle_publisher = this->m_node_handle.advertise<std_msgs::Float64>(TOPIC_FOCBOX_ANGLE, 1);
-    this->m_brake_publisher = this->m_node_handle.advertise<std_msgs::Float64>(TOPIC_FOCBOX_BRAKE, 1);
+    this->m_speed_publisher = this->create_publisher<std_msgs::msg::Float64>(TOPIC_FOCBOX_SPEED, 1);
+    this->m_angle_publisher = this->create_publisher<std_msgs::msg::Float64>(TOPIC_FOCBOX_ANGLE, 1);
+    this->m_brake_publisher = this->create_publisher<std_msgs::msg::Float64>(TOPIC_FOCBOX_BRAKE, 1);
 }
 
-void CarController::driveParametersCallback(const drive_msgs::drive_param::ConstPtr& parameters)
+void CarController::driveParametersCallback(const drive_msgs::msg::DriveParam::SharedPtr parameters)
 {
     this->publishDriveParameters((m_drive_param_lock || m_emergency_stop_lock) ? 0 : parameters->velocity,
                                  m_drive_param_lock ? 0 : parameters->angle);
@@ -35,25 +37,24 @@ void CarController::publishDriveParameters(double relative_speed, double relativ
     this->publishSpeed(speed);
     this->publishAngle(angle);
 
-    ROS_DEBUG_STREAM("running: "
-                     << " | speed: " << speed << " | angle: " << angle);
+    RCLCPP_DEBUG_STREAM(this->get_logger(), "running: " << " | speed: " << speed << " | angle: " << angle);
 }
 
 void CarController::publishSpeed(double speed)
 {
-    std_msgs::Float64 speed_message;
+    auto speed_message = std_msgs::msg::Float64();
     speed_message.data = speed;
-    this->m_speed_publisher.publish(speed_message);
+    this->m_speed_publisher->publish(speed_message);
 }
 
 void CarController::publishAngle(double angle)
 {
-    std_msgs::Float64 angle_message;
+    auto angle_message = std_msgs::msg::Float64();
     angle_message.data = angle;
-    this->m_angle_publisher.publish(angle_message);
+    this->m_angle_publisher->publish(angle_message);
 }
 
-void CarController::driveModeCallback(const std_msgs::Int32::ConstPtr& drive_mode_message)
+void CarController::driveModeCallback(const std_msgs::msg::Int32::SharedPtr drive_mode_message)
 {
     this->m_current_drive_mode = (DriveMode)drive_mode_message->data;
     this->m_drive_param_lock = this->m_current_drive_mode == DriveMode::LOCKED;
@@ -61,7 +62,7 @@ void CarController::driveModeCallback(const std_msgs::Int32::ConstPtr& drive_mod
         this->stop();
 }
 
-void CarController::emergencyStopCallback(const std_msgs::Bool::ConstPtr& emergency_stop_message)
+void CarController::emergencyStopCallback(const std_msgs::msg::Bool::SharedPtr emergency_stop_message)
 {
     bool enable_emergency_stop = emergency_stop_message->data && this->m_current_drive_mode != DriveMode::MANUAL;
     this->m_emergency_stop_lock = enable_emergency_stop;
@@ -73,15 +74,16 @@ void CarController::stop()
 {
     this->publishSpeed(0);
 
-    std_msgs::Float64 brake_message;
+    auto brake_message = std_msgs::msg::Float64();
     brake_message.data = 0;
-    this->m_brake_publisher.publish(brake_message);
+    this->m_brake_publisher->publish(brake_message);
 }
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "car_controller");
-    CarController carController;
-    ros::spin();
+    rclcpp::init(argc, argv);
+    auto car_controller = std::make_shared<CarController>();
+    rclcpp::spin(car_controller);
+    rclcpp::shutdown();
     return EXIT_SUCCESS;
 }

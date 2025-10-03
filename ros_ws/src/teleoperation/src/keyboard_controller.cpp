@@ -1,9 +1,7 @@
 #include "keyboard_controller.h"
-#include <boost/algorithm/clamp.hpp>
+#include <algorithm>
 #include <cmath>
-#include <std_msgs/Time.h>
-
-#include <teleoperation/keyboard_controllerConfig.h>
+#include <chrono>
 
 double map(double value, double in_lower, double in_upper, double out_lower, double out_upper)
 {
@@ -14,38 +12,27 @@ double map(double value, double in_lower, double in_upper, double out_lower, dou
  * Class constructor that sets up a publisher for the drive parameters topic, creates a window and starts a timer for
  * the main loop
  * */
-KeyboardController::KeyboardController()
+KeyboardController::KeyboardController() : Node("keyboard_controller")
 {
-    ROS_ASSERT_MSG(m_key_codes.size() == KEY_COUNT, "KEY_CODES needs to have KEY_COUNT many elements.");
-    ROS_ASSERT_MSG(this->m_key_pressed_state.size() == KEY_COUNT,
-                   "m_key_pressed_state needs to have KEY_COUNT many elements.");
+    assert(m_key_codes.size() == KEY_COUNT && "KEY_CODES needs to have KEY_COUNT many elements.");
+    assert(this->m_key_pressed_state.size() == KEY_COUNT &&
+           "m_key_pressed_state needs to have KEY_COUNT many elements.");
 
     this->m_drive_parameters_publisher =
-        this->m_node_handle.advertise<drive_msgs::drive_param>(TOPIC_DRIVE_PARAMETERS, 1);
-    this->m_enable_manual_publisher = this->m_node_handle.advertise<std_msgs::Time>(TOPIC_HEARTBEAT_MANUAL, 1);
-    this->m_enable_autonomous_publisher = this->m_node_handle.advertise<std_msgs::Time>(TOPIC_HEARTBEAT_AUTONOMOUS, 1);
+        this->create_publisher<drive_msgs::msg::DriveParam>(TOPIC_DRIVE_PARAMETERS, 1);
+    this->m_enable_manual_publisher = this->create_publisher<std_msgs::msg::Header>(TOPIC_HEARTBEAT_MANUAL, 1);
+    this->m_enable_autonomous_publisher = this->create_publisher<std_msgs::msg::Header>(TOPIC_HEARTBEAT_AUTONOMOUS, 1);
     this->m_drive_mode_subscriber =
-        this->m_node_handle.subscribe<std_msgs::Int32>(TOPIC_DRIVE_MODE, 1, &KeyboardController::driveModeCallback,
-                                                       this);
+        this->create_subscription<std_msgs::msg::Int32>(TOPIC_DRIVE_MODE, 1, 
+            std::bind(&KeyboardController::driveModeCallback, this, std::placeholders::_1));
 
     this->loadImages();
     this->createWindow();
 
-    auto tick_duration = ros::Duration(1.0 / PARAMETER_UPDATE_FREQUENCY);
-    this->m_timer = this->m_node_handle.createTimer(tick_duration, &KeyboardController::timerCallback, this);
+    auto tick_duration = std::chrono::milliseconds(static_cast<int>(1000.0 / PARAMETER_UPDATE_FREQUENCY));
+    this->m_timer = this->create_wall_timer(tick_duration, std::bind(&KeyboardController::timerCallback, this));
 
-    this->updateDynamicConfig();
-    m_dyn_cfg_server.setCallback([&](teleoperation::keyboard_controllerConfig& cfg, uint32_t) {
-        m_steering_speed = cfg.steering_speed;
-        m_acceleration = cfg.acceleration;
-        m_braking = cfg.braking;
-
-        m_fast_steer_limit = cfg.fast_steer_limit;
-        m_steering_gravity = cfg.steering_gravity;
-        m_throttle_gravity = cfg.throttle_gravity;
-
-        m_max_throttle = cfg.max_throttle;
-    });
+    this->declareParameters();
 }
 
 KeyboardController::~KeyboardController()
@@ -59,7 +46,8 @@ KeyboardController::~KeyboardController()
 
 void KeyboardController::createWindow()
 {
-    std::string icon_filename = ros::package::getPath("teleoperation") + std::string("/img/wasd.bmp");
+    std::string package_path = ament_index_cpp::get_package_share_directory("teleoperation");
+    std::string icon_filename = package_path + std::string("/img/wasd.bmp");
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -102,7 +90,7 @@ void KeyboardController::pollWindowEvents()
         }
         else if (event.type == SDL_QUIT)
         {
-            ros::shutdown();
+            rclcpp::shutdown();
         }
         else if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_EXPOSED)
         {
@@ -132,11 +120,12 @@ void KeyboardController::updateWindow()
 
 void KeyboardController::loadImages()
 {
-    std::string locked_filename = ros::package::getPath("teleoperation") + std::string("/img/locked.bmp");
+    std::string package_path = ament_index_cpp::get_package_share_directory("teleoperation");
+    std::string locked_filename = package_path + std::string("/img/locked.bmp");
     this->m_image_locked = SDL_LoadBMP(locked_filename.c_str());
-    std::string manual_filename = ros::package::getPath("teleoperation") + std::string("/img/manual.bmp");
+    std::string manual_filename = package_path + std::string("/img/manual.bmp");
     this->m_image_manual = SDL_LoadBMP(manual_filename.c_str());
-    std::string autonomous_filename = ros::package::getPath("teleoperation") + std::string("/img/autonomous.bmp");
+    std::string autonomous_filename = package_path + std::string("/img/autonomous.bmp");
     this->m_image_autonomous = SDL_LoadBMP(autonomous_filename.c_str());
 }
 
@@ -144,9 +133,12 @@ void KeyboardController::loadImages()
  * This method is called at each tick of the timer. It updates the keyboard state and the drive parameters and publishes
  * them to the ROS topic.
  * */
-void KeyboardController::timerCallback(const ros::TimerEvent& event)
+void KeyboardController::timerCallback()
 {
-    double delta_time = (event.current_real - event.last_real).toSec();
+    static auto last_time = std::chrono::steady_clock::now();
+    auto current_time = std::chrono::steady_clock::now();
+    double delta_time = std::chrono::duration<double>(current_time - last_time).count();
+    last_time = current_time;
 
     this->pollWindowEvents();
     this->updateDriveParameters(delta_time);
@@ -154,10 +146,10 @@ void KeyboardController::timerCallback(const ros::TimerEvent& event)
     this->updateDeadMansSwitch();
 }
 
-std_msgs::Time createHearbeatMessage()
+std_msgs::msg::Header createHeartbeatMessage()
 {
-    std_msgs::Time message;
-    message.data = ros::Time::now();
+    std_msgs::msg::Header message;
+    message.stamp = rclcpp::Clock().now();
     return message;
 }
 
@@ -168,11 +160,11 @@ void KeyboardController::updateDeadMansSwitch()
 {
     if (this->m_key_pressed_state[(size_t)KeyIndex::ENABLE_MANUAL])
     {
-        this->m_enable_manual_publisher.publish(createHearbeatMessage());
+        this->m_enable_manual_publisher->publish(createHeartbeatMessage());
     }
     if (this->m_key_pressed_state[(size_t)KeyIndex::ENABLE_AUTONOMOUS])
     {
-        this->m_enable_autonomous_publisher.publish(createHearbeatMessage());
+        this->m_enable_autonomous_publisher->publish(createHeartbeatMessage());
     }
 }
 
@@ -196,9 +188,9 @@ void KeyboardController::updateDriveParameters(double delta_time)
 
     double steer_limit = map(std::abs(this->m_velocity), 0, m_max_throttle, 1, m_fast_steer_limit);
     double angle_update = steer * delta_time * m_steering_speed;
-    this->m_angle = boost::algorithm::clamp(this->m_angle + angle_update, -steer_limit, +steer_limit);
+    this->m_angle = std::clamp(this->m_angle + angle_update, -steer_limit, +steer_limit);
     double velocity_update = throttle * delta_time * (this->m_velocity * throttle > 0 ? m_acceleration : m_braking);
-    this->m_velocity = boost::algorithm::clamp(this->m_velocity + velocity_update, -m_max_throttle, +m_max_throttle);
+    this->m_velocity = std::clamp(this->m_velocity + velocity_update, -m_max_throttle, +m_max_throttle);
 
     if (steer == 0 && this->m_angle != 0)
     {
@@ -224,17 +216,17 @@ void KeyboardController::updateDriveParameters(double delta_time)
 
 void KeyboardController::publishDriveParameters()
 {
-    drive_msgs::drive_param drive_parameters;
+    auto drive_parameters = drive_msgs::msg::DriveParam();
     drive_parameters.velocity = this->m_velocity;
     drive_parameters.angle = this->m_angle;
-    this->m_drive_parameters_publisher.publish(drive_parameters);
+    this->m_drive_parameters_publisher->publish(drive_parameters);
 }
 
-void KeyboardController::driveModeCallback(const std_msgs::Int32::ConstPtr& drive_mode_message)
+void KeyboardController::driveModeCallback(const std_msgs::msg::Int32::SharedPtr drive_mode_message)
 {
     auto mode = (DriveMode)drive_mode_message->data;
-    ROS_ASSERT_MSG(mode == DriveMode::LOCKED || mode == DriveMode::MANUAL || mode == DriveMode::AUTONOMOUS,
-                   "Unknown drive mode.");
+    assert((mode == DriveMode::LOCKED || mode == DriveMode::MANUAL || mode == DriveMode::AUTONOMOUS) &&
+           "Unknown drive mode.");
     if (this->m_drive_mode != mode)
     {
         this->m_drive_mode = mode;
@@ -242,27 +234,31 @@ void KeyboardController::driveModeCallback(const std_msgs::Int32::ConstPtr& driv
     }
 }
 
-void KeyboardController::updateDynamicConfig()
+void KeyboardController::declareParameters()
 {
-    teleoperation::keyboard_controllerConfig cfg;
-    {
-        cfg.steering_speed = m_steering_speed;
-        cfg.acceleration = m_acceleration;
-        cfg.braking = m_braking;
+    this->declare_parameter("steering_speed", m_steering_speed);
+    this->declare_parameter("acceleration", m_acceleration);
+    this->declare_parameter("braking", m_braking);
+    this->declare_parameter("fast_steer_limit", m_fast_steer_limit);
+    this->declare_parameter("steering_gravity", m_steering_gravity);
+    this->declare_parameter("throttle_gravity", m_throttle_gravity);
+    this->declare_parameter("max_throttle", m_max_throttle);
 
-        cfg.fast_steer_limit = m_fast_steer_limit;
-        cfg.steering_gravity = m_steering_gravity;
-        cfg.throttle_gravity = m_throttle_gravity;
-
-        cfg.max_throttle = m_max_throttle;
-    }
-    m_dyn_cfg_server.updateConfig(cfg);
+    // Get parameters
+    this->get_parameter("steering_speed", m_steering_speed);
+    this->get_parameter("acceleration", m_acceleration);
+    this->get_parameter("braking", m_braking);
+    this->get_parameter("fast_steer_limit", m_fast_steer_limit);
+    this->get_parameter("steering_gravity", m_steering_gravity);
+    this->get_parameter("throttle_gravity", m_throttle_gravity);
+    this->get_parameter("max_throttle", m_max_throttle);
 }
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "keyboard_controller");
-    KeyboardController keyboard_controller;
-    ros::spin();
+    rclcpp::init(argc, argv);
+    auto keyboard_controller = std::make_shared<KeyboardController>();
+    rclcpp::spin(keyboard_controller);
+    rclcpp::shutdown();
     return EXIT_SUCCESS;
 }

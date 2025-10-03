@@ -1,14 +1,15 @@
 #pragma once
 
 #include "drive_mode.h"
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
+#include <memory>
 
-#include <drive_msgs/drive_param.h>
-#include <std_msgs/Bool.h>
-#include <std_msgs/Float64.h>
-#include <std_msgs/Int32.h>
+#include <drive_msgs/msg/drive_param.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/float64.hpp>
+#include <std_msgs/msg/int32.hpp>
 
 constexpr const char* TOPIC_FOCBOX_SPEED = "/commands/motor/speed";
 constexpr const char* TOPIC_FOCBOX_ANGLE = "/commands/servo/position";
@@ -17,21 +18,19 @@ constexpr const char* TOPIC_DRIVE_PARAM = "/commands/drive_param";
 constexpr const char* TOPIC_DRIVE_MODE = "/commands/drive_mode";
 constexpr const char* TOPIC_EMERGENCY_STOP = "/commands/emergency_stop";
 
-class CarController
+class CarController : public rclcpp::Node
 {
     public:
     CarController();
 
     private:
-    ros::NodeHandle m_node_handle;
+    rclcpp::Subscription<drive_msgs::msg::DriveParam>::SharedPtr m_drive_parameters_subscriber;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr m_drive_mode_subscriber;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr m_emergency_stop_subscriber;
 
-    ros::Subscriber m_drive_parameters_subscriber;
-    ros::Subscriber m_drive_mode_subscriber;
-    ros::Subscriber m_emergency_stop_subscriber;
-
-    ros::Publisher m_speed_publisher;
-    ros::Publisher m_angle_publisher;
-    ros::Publisher m_brake_publisher;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr m_speed_publisher;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr m_angle_publisher;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr m_brake_publisher;
 
     bool m_drive_param_lock;
     bool m_emergency_stop_lock;
@@ -40,17 +39,17 @@ class CarController
     /**
      * @brief deals with incomming drive param messages
      */
-    void driveParametersCallback(const drive_msgs::drive_param::ConstPtr& parameters);
+    void driveParametersCallback(const drive_msgs::msg::DriveParam::SharedPtr parameters);
 
     /**
      * @brief sets the current drive mode
      */
-    void driveModeCallback(const std_msgs::Int32::ConstPtr& drive_mode_message);
+    void driveModeCallback(const std_msgs::msg::Int32::SharedPtr drive_mode_message);
 
     /**
      * @brief callback for the topic that enables / disables the motor
      */
-    void emergencyStopCallback(const std_msgs::Bool::ConstPtr& drive_mode_message);
+    void emergencyStopCallback(const std_msgs::msg::Bool::SharedPtr drive_mode_message);
 
     /**
      * @brief takes a speed and angle, converts and forwards them to gazebo/focbox

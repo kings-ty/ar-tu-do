@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package format="2">
+<package format="3">
   <name>hardware</name>
   <version>0.0.0</version>
   <description>
-    This package is here to create a dependency to the razor_imu_9dof package
-    and to contain the configuration for the razor_imu_9dof node
+    This package contains configuration for hardware components including
+    IMU sensor calibration and vehicle coordinate frame definitions
   </description>
 
   <!-- Maintainer -->
@@ -14,8 +14,22 @@
   <license>MIT</license>
   <license>GPLv3</license>
 
-  <!-- Dependencies -->
-  <buildtool_depend>catkin</buildtool_depend>
+  <!-- ROS 2 Dependencies -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  
+  <!-- For coordinate transforms -->
+  <depend>tf2_ros</depend>
+  
+  <!-- TODO: Find ROS 2 equivalent for razor_imu_9dof -->
+  <!-- <depend>razor_imu_9dof</depend> -->
 
-  <depend>razor_imu_9dof</depend>
+  <!-- Testing Dependencies -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <!-- Export information -->
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
 </package>

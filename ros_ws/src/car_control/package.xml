@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package format="2">
+<package format="3">
   <name>car_control</name>
   <version>0.0.0</version>
   <description>The "car_control" package relays the drive commands to the physical car.</description>
@@ -11,13 +11,22 @@
   <license>MIT</license>
   <license>GPLv3</license>
 
-  <!-- Dependencies -->
-  <buildtool_depend>catkin</buildtool_depend>
+  <!-- ROS 2 Dependencies -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>drive_msgs</depend>
-  <depend>roscpp</depend>
-  <depend>rospy</depend>
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
   <depend>std_msgs</depend>
-  <depend>vesc_sim</depend>
+
+  <!-- Testing Dependencies -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <!-- Export information -->
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 
 </package>

@@ -1,0 +1,24 @@
+cmake_minimum_required(VERSION 3.8)
+project(racer_description)
+
+find_package(ament_cmake REQUIRED)
+find_package(urdf REQUIRED)
+find_package(xacro REQUIRED)
+find_package(robot_state_publisher REQUIRED)
+find_package(joint_state_publisher REQUIRED)
+find_package(rviz2 REQUIRED)
+
+# For C++ nodes, if any, though this package is mainly description
+# find_package(rclcpp REQUIRED)
+
+# For Python nodes, if any
+# find_package(rclpy REQUIRED)
+
+ament_package()
+
+install(DIRECTORY
+  launch
+  meshes
+  urdf
+  DESTINATION share/${PROJECT_NAME}
+)

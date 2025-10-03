@@ -1,48 +1,32 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.8)
 project(drive_msgs)
 
-## Find catkin macros and libraries
-find_package(catkin REQUIRED COMPONENTS
-  std_msgs
-  message_generation
+# Default to C++17
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# Find dependencies
+find_package(ament_cmake REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+
+# Generate message files
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/DriveParam.msg"
+  DEPENDENCIES std_msgs
 )
 
-## Errors and Warnings
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wchar-subscripts -Wchkp -Wdouble-promotion -Wformat -Wnonnull -Wmain -Wswitch-bool -Winvalid-memory-model -Wunknown-pragmas -Warray-bounds -Wfloat-equal -Wlogical-op -Wpacked ")
-# -Wpedantic cant be used because of ROS
+# Export dependencies
+ament_export_dependencies(rosidl_default_runtime)
 
-################################################
-## Declare ROS messages, services and actions ##
-################################################
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
 
-## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  drive_param.msg
-)
-
-## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-)
-
-
-###################################
-## catkin specific configuration ##
-###################################
-
-## Declare things to be passed to dependent projects
-catkin_package(
-  CATKIN_DEPENDS message_runtime std_msgs
-)
-
-
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-)
+ament_package()

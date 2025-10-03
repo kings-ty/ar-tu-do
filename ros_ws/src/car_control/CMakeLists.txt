@@ -1,61 +1,60 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.8)
 project(car_control)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++1y)
+# Default to C++17
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
 
-## Find catkin macros and libraries
-find_package(catkin REQUIRED COMPONENTS
-  drive_msgs  
-  roscpp
-  rospy
-  std_msgs
-  vesc_sim
-)
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-## Errors and Warnings
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wchar-subscripts -Wchkp -Wdouble-promotion -Wformat -Wnonnull -Wmain -Wswitch-bool -Winvalid-memory-model -Wunknown-pragmas -Warray-bounds -Wfloat-equal -Wlogical-op -Wpacked ")
-# -Wpedantic cant be used because of ROS
+# Find dependencies
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(drive_msgs REQUIRED)
 
-###################################
-## catkin specific configuration ##
-###################################
-
-## Declare things to be passed to dependent projects
-catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp rospy std_msgs drive_msgs vesc_sim
-)
-
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-)
+# Include directories
+include_directories(include)
 
 # Declare car controller node executable
 add_executable(car_controller src/car_controller.cpp)
-target_link_libraries(car_controller ${catkin_LIBRARIES})
-add_dependencies(car_controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+ament_target_dependencies(car_controller
+  rclcpp
+  std_msgs
+  drive_msgs
+)
 
-# Declare dms controller node executable
-add_executable(dms_controller src/dms_controller.cpp)
-target_link_libraries(dms_controller ${catkin_LIBRARIES})
-add_dependencies(dms_controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# TODO: Migrate other executables later
+# add_executable(dms_controller src/dms_controller.cpp)
+# add_executable(drive_parameters_multiplexer src/drive_parameters_multiplexer.cpp src/drive_parameters_source.cpp)
 
-# Declare Drive Parameters Multiplexer node executable
-add_executable(drive_parameters_multiplexer src/drive_parameters_multiplexer.cpp src/drive_parameters_source.cpp)
-target_link_libraries(drive_parameters_multiplexer ${catkin_LIBRARIES})
-add_dependencies(drive_parameters_multiplexer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# Install executables
+install(TARGETS
+  car_controller
+  DESTINATION lib/${PROJECT_NAME}
+)
 
+# Install launch files
+install(DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+)
 
-#############
-## Testing ##
-#############
+# Install include directory
+install(DIRECTORY include/
+  DESTINATION include/${PROJECT_NAME}
+)
 
-## Add gtest based cpp test target and link libraries
-catkin_add_gtest(${PROJECT_NAME}-test test/test_car_control.cpp)
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
+  
+  ament_lint_auto_find_test_dependencies()
+  
+  ament_add_gtest(${PROJECT_NAME}-test test/test_car_control.cpp)
+  ament_target_dependencies(${PROJECT_NAME}-test rclcpp std_msgs drive_msgs)
+endif()
+
+ament_package()

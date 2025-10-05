@@ -17,7 +17,7 @@ controller_manager:
     right_wheel_controller:
       type: velocity_controllers/JointGroupVelocityController
 
-# --- Controller-specific parameters ---
+# --- Controller-specific parameters  ---
 
 # Steering Controllers
 left_steering_controller:

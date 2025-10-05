@@ -1,0 +1,1 @@
+/home/ty/f1test_ws/ar-tu-do/ros_ws/build/car_tf/ament_cmake_environment_hooks/local_setup.bash

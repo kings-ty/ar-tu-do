@@ -11,7 +11,7 @@ ros_ws/src/navigation_stack/car_cartographer/files/*
 
 # ROS2 build artifacts
 build/
-install/
+# install/
 log/
 
 # Include necessary world and model files for launch

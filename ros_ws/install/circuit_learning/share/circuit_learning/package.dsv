@@ -1,0 +1,8 @@
+source;share/circuit_learning/hook/cmake_prefix_path.ps1
+source;share/circuit_learning/hook/cmake_prefix_path.dsv
+source;share/circuit_learning/hook/cmake_prefix_path.sh
+source;share/circuit_learning/local_setup.bash
+source;share/circuit_learning/local_setup.dsv
+source;share/circuit_learning/local_setup.ps1
+source;share/circuit_learning/local_setup.sh
+source;share/circuit_learning/local_setup.zsh

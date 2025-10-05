@@ -1,0 +1,1 @@
+/home/ty/f1test_ws/ar-tu-do/ros_ws/build/racer_description/ament_cmake_environment_hooks/local_setup.zsh

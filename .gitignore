@@ -14,9 +14,9 @@ build/
 # install/
 log/
 
-# Include necessary world and model files for launch
-!install/racer_world/share/racer_world/worlds/*.world
-!robot*.urdf
+# # Include necessary world and model files for launch
+# !install/racer_world/share/racer_world/worlds/*.world
+# !robot*.urdf
 
 # Python cache
 __pycache__/
